@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=Test
+      - MYSQL_DATABASE=DocDB
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    networks:
+      - doctor-appointment
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    
+  mainapp:
+       build: .
+       container_name: Doctor-appointment
+       environment:
+         - SPRING_DATASOURCE_USERNAME=root
+         - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/DocDB?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+         - SPRING_DATASOURCE_PASSWORD=Test
+       ports:
+         - "8080:8080"
+       depends_on:
+         mysql:
+          condition: service_healthy
+       networks:
+         - doctor-appointment
+       restart: always
+       healthcheck:
+         test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+         interval: 10s
+         timeout: 5s
+         retries: 5
+         start_period: 30s
+
+networks:
+  doctor-appointment:
